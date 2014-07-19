@@ -10,10 +10,10 @@ a true;
 id = (\x : Bool . x);
 id false;
 
-a = (\x : Bool . x);
+b = (\x : Bool . x);
 
-a true;
+b true;
 
-a false true; /* error */
+b false true; /* error */
 
 (\x:Bool . \x:Bool . x) true false true false;

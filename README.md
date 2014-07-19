@@ -33,7 +33,8 @@ PASS: a = (\x : Bool -> x)
 PASS: (a true)
 PASS: id = (\x : Bool -> x)
 PASS: (id false)
-PASS: a = (\x : Bool -> x)
-PASS: (a true)
-FAIL: TypeError: (a false) is not a function
+PASS: b = (\x : Bool -> x)
+PASS: (b true)
+FAIL: TypeError: (b false) is not a function
+FAIL: TypeError: (((\x : Bool -> (\x : Bool -> x)) true) false) is not a function
 ```

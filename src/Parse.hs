@@ -139,5 +139,5 @@ parseHlam filename source = do
       check _ [] = []
       check ctx (x:xs) = 
           case typecheck ctx x of
-            (Left err, _) -> Left ("TypeError: " ++ err) : []
+            (Left err, newctx) -> Left ("TypeError: " ++ err) : (check newctx xs)
             (Right _, newctx) -> Right x : (check newctx xs)

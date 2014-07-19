@@ -33,5 +33,6 @@ hlam: src/*.hs
 	$(GHC) $(GHCFLAGS) --make src/Main.hs -o hlam
 
 test: hlam
-	./hlam test.f
+	@echo "=======> test.f <======="
+	@./hlam test.f
 

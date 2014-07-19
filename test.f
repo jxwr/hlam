@@ -1,15 +1,19 @@
 true;
 
-a = true;
+(\x : Bool . x) true;
 
-if false then true else false;
+(\x : Bool . x) if false then true else false;
 
-a true false;
+a = (\x : Bool . x);
+a true;
 
 id = (\x : Bool . x);
-
 id false;
 
-id id; /* bug? */
+a = (\x : Bool . x);
 
-(\x:Bool . \x:Bool . x) true false;
+a true;
+
+a false true; /* error */
+
+(\x:Bool . \x:Bool . x) true false true false;

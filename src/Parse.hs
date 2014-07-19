@@ -2,8 +2,10 @@ module Parse where
 
 import Prelude hiding (exp)
 import Text.Parsec
+import Data.Map as M
 
 import Syntax
+import TypeCheck
 import Error
 
 type Parser a = Parsec String () a
@@ -118,15 +120,24 @@ parseLetStmt = do
 
 parseStmt :: Parser Stmt
 parseStmt = do
-  try parseExpStmt <|> parseLetStmt
+  try parseLetStmt <|> parseExpStmt 
 
 parseStmts :: Parser [Stmt]
 parseStmts = do
+  separators
   stmts <- endBy1 parseStmt semi
   return stmts
 
-parseHlam :: String -> String -> Either HlamError [Stmt]
+parseHlam :: String -> String -> Either HlamError [Either TypeError Stmt]
 parseHlam filename source = do
+  let ctx = M.empty
   case parse parseStmts filename source of
     Left err -> Left (show err)
-    Right stmts -> Right stmts
+    Right stmts -> Right $ check ctx stmts
+    where
+      check :: TypeCheckContext -> [Stmt] -> [Either TypeError Stmt]
+      check _ [] = []
+      check ctx (x:xs) = 
+          case typecheck ctx x of
+            (Left err, _) -> Left ("TypeError: " ++ err) : []
+            (Right _, newctx) -> Right x : (check newctx xs)

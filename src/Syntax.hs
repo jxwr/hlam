@@ -4,11 +4,11 @@ newtype Var = Var { unVar :: String }
     deriving (Eq)
 
 data Exp = VarE Var
-         | AbsE Var Type Exp
+         | AbsE Var Type Exp -- \x : Bool . x
          | AppE Exp Exp
          | TrueE
          | FalseE
-         | IfE Exp Exp Exp
+         | IfE Exp Exp Exp   -- if true then false else true
 
 data Type = BoolT
           | FunT Type Type
@@ -23,10 +23,10 @@ instance Show Var where
 instance Show Exp where
     show (VarE v) = show v
     show (AbsE v t e) = "(\\" ++ show v ++ " : " ++ show t ++ " -> " ++ show e ++ ")"
-    show (AppE e1 e2) = show e1 ++ " " ++ show e2
+    show (AppE e1 e2) = "(" ++ show e1 ++ " " ++ show e2 ++ ")"
     show TrueE = "true"
     show FalseE = "false"
-    show (IfE e1 e2 e3) = "if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3
+    show (IfE e1 e2 e3) = "(if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3 ++ ")"
 
 instance Show Type where
     show BoolT = "Bool"

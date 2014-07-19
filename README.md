@@ -1,0 +1,2 @@
+## My haskell exercise book
+

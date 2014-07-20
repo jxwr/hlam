@@ -7,6 +7,7 @@ import Data.Map as M
 import Syntax
 import TypeCheck
 import Error
+import Monad
 
 type Parser a = Parsec String () a
 
@@ -128,16 +129,16 @@ parseStmts = do
   stmts <- endBy1 parseStmt semi
   return stmts
 
-parseHlam :: String -> String -> Either HlamError [Either TypeError Stmt]
+parseHlam :: String -> String -> [HlamM Stmt]
 parseHlam filename source = do
   let ctx = M.empty
   case parse parseStmts filename source of
-    Left err -> Left (show err)
-    Right stmts -> Right $ check ctx stmts
+    Left err -> [Left $ ParseError (show err)]
+    Right stmts -> check ctx stmts
     where
-      check :: TypeCheckContext -> [Stmt] -> [Either TypeError Stmt]
+      check :: TypeCheckContext -> [Stmt] -> [HlamM Stmt]
       check _ [] = []
       check ctx (x:xs) = 
           case typecheck ctx x of
-            (Left err, newctx) -> Left ("TypeError: " ++ err) : (check newctx xs)
+            (Left err, newctx) -> Left err : (check newctx xs)
             (Right _, newctx) -> Right x : (check newctx xs)

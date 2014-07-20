@@ -6,16 +6,10 @@ import Parse
 evalFile :: String -> IO ()
 evalFile filename = do
   s <- readFile filename
-  case parseHlam filename s of
-    Left err -> putStrLn err
-    Right stmts -> do
-      mapM_ putStrLn $ texts stmts
+  mapM_ putStrLn $ map showResult (parseHlam filename s)
     where
-      texts [] = []
-      texts (x:xs) = 
-          case x of
-            Left err -> ("FAIL: " ++ err) : texts xs
-            Right stmt -> ("PASS: " ++ show stmt) : texts xs
+      showResult (Left err) = show err
+      showResult (Right result) = show result
 
 main :: IO ()
 main = do

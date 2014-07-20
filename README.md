@@ -1,9 +1,21 @@
-## My haskell exercise book
+## Hlam
+
+To be a simple typed lambda calculus interpreter
 
 ### Simple Type Checker:
 
 ```
 true;
+
+1 + 2 * 3;
+
+1 + true;
+
+true + false;
+
+true && false;
+
+true && 1;
 
 (\x : Bool . x) true;
 
@@ -19,22 +31,28 @@ b = (\x : Bool . x);
 
 b true;
 
-b false true; /* error */
+b false true;
 
 (\x:Bool . \x:Bool . x) true false true false;
+
 ```
 
 ```
 =======> test.f <=======
-PASS: true
-PASS: ((\x : Bool -> x) true)
-PASS: ((\x : Bool -> x) (if false then true else false))
-PASS: a = (\x : Bool -> x)
-PASS: (a true)
-PASS: id = (\x : Bool -> x)
-PASS: (id false)
-PASS: b = (\x : Bool -> x)
-PASS: (b true)
-FAIL: TypeError: (b false) is not a function
-FAIL: TypeError: (((\x : Bool -> (\x : Bool -> x)) true) false) is not a function
+true
+(1+(2*3))
+TypeError: '+' need two IntT operands, Int and Bool given
+TypeError: '+' need two IntT operands, Bool and Bool given
+(true&&false)
+TypeError: '&&' need two BoolT operands, Bool and Int given
+((\x : Bool -> x) true)
+((\x : Bool -> x) (if false then true else false))
+a = (\x : Bool -> x)
+(a true)
+id = (\x : Bool -> x)
+(id false)
+b = (\x : Bool -> x)
+(b true)
+TypeError: (b false) is not a function
+TypeError: (((\x : Bool -> (\x : Bool -> x)) true) false) is not a function
 ```

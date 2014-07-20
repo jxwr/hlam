@@ -1,4 +1,15 @@
+
 true;
+
+1 + 2 * 3;
+
+1 + true;
+
+true + false;
+
+true && false;
+
+true && 1;
 
 (\x : Bool . x) true;
 
@@ -14,6 +25,7 @@ b = (\x : Bool . x);
 
 b true;
 
-b false true; /* error */
+b false true;
 
 (\x:Bool . \x:Bool . x) true false true false;
+

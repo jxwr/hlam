@@ -56,6 +56,11 @@ parseVar = do
   lit <- many1 letter
   return $ Var lit
 
+parseIntE :: Parser Exp
+parseIntE = do
+  dig <- many1 digit
+  return $ IntE (read dig :: Int)
+
 parseTrueE :: Parser Exp
 parseTrueE = do
   keyword "true" >> return TrueE
@@ -73,9 +78,17 @@ parseBoolT :: Parser Type
 parseBoolT = do
   keyword "Bool" >> return BoolT
 
+parseIntT :: Parser Type
+parseIntT = do
+  keyword "Int" >> return IntT
+
+parseBaseType :: Parser Type
+parseBaseType = do
+  parseBoolT <|> parseIntT <|> parens parseBaseType
+
 parseType :: Parser Type
 parseType = do
-  ts <- sepBy1 parseBoolT (keyword "->")
+  ts <- sepBy1 parseBaseType (keyword "->")
   return $ foldl1 FunT ts
 
 parseAbsE :: Parser Exp
@@ -98,13 +111,38 @@ parseIfE = do
   e3 <- parseSimpleExp
   return $ IfE e1 e2 e3
 
+-- FIXME: Operator precedence
+parseBinOpRest :: Exp -> Parser Exp
+parseBinOpRest e1 = do
+  op <- (try parseAdd <|> try parseSub <|> try parseMul <|> try parseDiv <|> try parseLAnd <|> try parseLOr)
+  e2 <- parseBinOpE
+  return $ BinOpE op e1 e2
+    where 
+      parseAdd = keyword "+" >> return Add
+      parseSub = keyword "-" >> return Sub
+      parseMul = keyword "*" >> return Mul
+      parseDiv = keyword "/" >> return Div
+      parseLAnd = keyword "&&" >> return LAnd
+      parseLOr = keyword "||" >> return LOr
+
+parseBinOpE :: Parser Exp
+parseBinOpE = do
+  e1 <- parseSimpleExp
+  try (parseBinOpRest e1) <|> return e1
+
 parseSimpleExp :: Parser Exp
-parseSimpleExp = do
-  parseTrueE <|> parseFalseE <|> parseIfE <|> parseVarE <|> parseAbsE <|> parens parseExp
+parseSimpleExp =
+    parseTrueE <|> 
+    parseFalseE <|> 
+    parseIfE <|> 
+    parseVarE <|> 
+    parseAbsE <|> 
+    parseIntE <|> 
+    parens parseExp
 
 parseExp :: Parser Exp
 parseExp = do
-  es <- sepBy1 parseSimpleExp separators
+  es <- sepBy1 parseBinOpE separators
   return $ foldl1 AppE es
 
 parseExpStmt :: Parser Stmt
@@ -140,5 +178,5 @@ parseHlam filename source = do
       check _ [] = []
       check ctx (x:xs) = 
           case typecheck ctx x of
-            (Left err, newctx) -> Left err : (check newctx xs)
-            (Right _, newctx) -> Right x : (check newctx xs)
+            (Left err, ctx') -> Left err : (check ctx' xs)
+            (Right _, ctx') -> Right x : (check ctx' xs)

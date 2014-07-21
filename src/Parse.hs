@@ -25,10 +25,8 @@ parens = surroundedBy (char '(' >> return ()) (char ')' >> return ())
 
 comment :: Parser ()
 comment = do
-    _ <- string "/*"
-    _ <- many ((noneOf "*" >> return ()) <|> starNotCommentEnd)
-    commentEnd
-    return ()
+  string "/*" >> many ((noneOf "*" >> return ()) <|> starNotCommentEnd) >> commentEnd
+  return ()
 
 starNotCommentEnd :: Parser ()
 starNotCommentEnd = try (many1 (char '*') >> noneOf "/" >> return ())

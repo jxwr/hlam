@@ -56,7 +56,7 @@ typecheckExp ctx (AppE e1 e2) = do
     IntT -> Left $ TypeError $ show e1 ++ " is not a function"
     FunT fromT toT -> 
         if fromT /= t2 then 
-            Left $ TypeError $ (show e1) ++ " and " ++ (show e2) ++ " have different types, " ++ (show t1) ++ " <-> " ++ (show t2)
+            Left $ TypeError $ "function " ++ (show e1) ++ " need " ++ (show fromT) ++ " typed argument, but " ++ (show t2) ++ " given "
         else
             Right toT
 

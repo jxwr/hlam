@@ -2,14 +2,15 @@ module Syntax where
 
 newtype Var = Var { unVar :: String } deriving (Eq)
 
-data Exp = VarE Var
+data Expr = VarE Var
          | IntE Int
-         | AbsE Var Type Exp -- \x : Bool . x
-         | AppE Exp Exp
+         | AbsE Var Type Expr -- \x : Bool . x
+         | AppE Expr Expr
          | TrueE
          | FalseE
-         | IfE Exp Exp Exp   -- if true then false else true
-         | BinOpE Op Exp Exp
+         | IfE Expr Expr Expr   -- if true then false else true
+         | BinOpE Op Expr Expr
+         | LetE Var Expr
 
 data Op = Add | Sub | Mul | Div | LAnd | LOr
 
@@ -18,13 +19,10 @@ data Type = BoolT
           | FunT Type Type
             deriving (Eq)
 
-data Stmt = ExpStmt Exp
-          | LetStmt Var Exp
-
 instance Show Var where
     show (Var v) = v
 
-instance Show Exp where
+instance Show Expr where
     show (VarE v) = show v
     show (IntE v) = show v
     show (AbsE v t e) = "(\\" ++ show v ++ " : " ++ show t ++ " -> " ++ show e ++ ")"
@@ -33,6 +31,7 @@ instance Show Exp where
     show FalseE = "false"
     show (IfE e1 e2 e3) = "(if " ++ show e1 ++ " then " ++ show e2 ++ " else " ++ show e3 ++ ")"
     show (BinOpE op e1 e2) = "(" ++ show e1 ++ show op ++ show e2 ++ ")"
+    show (LetE v e) = show v ++ " = " ++ show e
 
 instance Show Op where
     show Add = "+"
@@ -46,7 +45,3 @@ instance Show Type where
     show BoolT = "Bool"
     show IntT = "Int"
     show (FunT t1 t2) = show t1 ++ "->" ++ show t2
-
-instance Show Stmt where
-    show (ExpStmt e) = show e
-    show (LetStmt v e) = show v ++ " = " ++ show e

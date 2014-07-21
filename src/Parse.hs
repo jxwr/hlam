@@ -2,7 +2,7 @@ module Parse where
 
 import Prelude hiding (exp)
 import Text.Parsec
-import Data.Map as M
+import Data.Map as M hiding (map)
 
 import Syntax
 import TypeCheck
@@ -54,20 +54,20 @@ var = do
   lit <- many1 letter
   return $ Var lit
 
-intE :: Parser Exp
+intE :: Parser Expr
 intE = do
   dig <- many1 digit
   return $ IntE (read dig :: Int)
 
-trueE :: Parser Exp
+trueE :: Parser Expr
 trueE = do
   keyword "true" >> return TrueE
 
-falseE :: Parser Exp
+falseE :: Parser Expr
 falseE = do
   keyword "false" >> return FalseE
 
-varE :: Parser Exp
+varE :: Parser Expr
 varE = do
   v <- var
   return $ VarE v
@@ -89,30 +89,30 @@ typ = do
   ts <- sepBy1 baseType (keyword "->")
   return $ foldl1 FunT ts
 
-absE :: Parser Exp
+absE :: Parser Expr
 absE = do
   keyword "\\"
   v <- var
   keyword ":"
   t <- typ
   keyword "."
-  e <- exp
+  e <- expr
   return $ AbsE v t e
 
-ifE :: Parser Exp
+ifE :: Parser Expr
 ifE = do
   keyword "if"
-  e1 <- simpleExp
+  e1 <- simpleExpr
   keyword "then"
-  e2 <- simpleExp
+  e2 <- simpleExpr
   keyword "else"
-  e3 <- simpleExp
+  e3 <- simpleExpr
   return $ IfE e1 e2 e3
 
 -- FIXME: Operator precedence
-binOpRest :: Exp -> Parser Exp
+binOpRest :: Expr -> Parser Expr
 binOpRest e1 = do
-  op <- (try add' <|> try sub' <|> try mul' <|> try div' <|> try and' <|> try or')
+  op <- choice $ map try [add', sub', mul', div', and', or']
   e2 <- binOpE
   return $ BinOpE op e1 e2
     where 
@@ -123,56 +123,40 @@ binOpRest e1 = do
       and' = keyword "&&" >> return LAnd
       or' = keyword "||" >> return LOr
 
-binOpE :: Parser Exp
+binOpE :: Parser Expr
 binOpE = do
-  e1 <- simpleExp
+  e1 <- simpleExpr
   try (binOpRest e1) <|> return e1
 
-simpleExp :: Parser Exp
-simpleExp =
-    trueE <|> 
-    falseE <|> 
-    ifE <|> 
-    varE <|> 
-    absE <|> 
-    intE <|> 
-    parens exp
+simpleExpr :: Parser Expr
+simpleExpr = choice $ map try [letE, trueE, falseE, ifE, varE, absE, intE, parens expr]
 
-exp :: Parser Exp
-exp = do
+letE :: Parser Expr
+letE = do
+  v <- var
+  keyword "="
+  e <- expr
+  return $ LetE v e
+
+expr :: Parser Expr
+expr = do
   es <- sepBy1 binOpE separators
   return $ foldl1 AppE es
 
-expStmt :: Parser Stmt
-expStmt = do
-  e <- exp
-  return $ ExpStmt e
-
-letStmt :: Parser Stmt
-letStmt = do
-  v <- var
-  keyword "="
-  e <- exp
-  return $ LetStmt v e
-
-stmt :: Parser Stmt
-stmt = do
-  try letStmt <|> expStmt 
-
-parseStmts :: Parser [Stmt]
-parseStmts = do
+exprs :: Parser [Expr]
+exprs = do
   separators
-  stmts <- endBy1 stmt semi
-  return stmts
+  es <- endBy1 expr semi
+  return es
 
-parseHlam :: String -> String -> [HlamM Stmt]
+parseHlam :: String -> String -> [HlamM Expr]
 parseHlam filename source = do
   let ctx = M.empty
-  case parse parseStmts filename source of
+  case parse exprs filename source of
     Left err -> [Left $ ParseError (show err)]
-    Right stmts -> check ctx stmts
+    Right exps -> check ctx exps
     where
-      check :: TypeCheckContext -> [Stmt] -> [HlamM Stmt]
+      check :: TypeCheckContext -> [Expr] -> [HlamM Expr]
       check _ [] = []
       check ctx (x:xs) = 
           case typecheck ctx x of

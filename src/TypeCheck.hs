@@ -8,15 +8,15 @@ import Error
 type TypeCheckContext = M.Map String Type
 type TypeError = String
 
-typecheckExp :: TypeCheckContext -> Exp -> HlamM Type
-typecheckExp ctx (VarE v) = 
+typecheckExpr :: TypeCheckContext -> Expr -> HlamM Type
+typecheckExpr ctx (VarE v) = 
     case M.lookup (unVar v) ctx of
       Just t -> Right t
       Nothing -> Left $ TypeError $ "No type info for " ++ show v
 
-typecheckExp ctx (BinOpE op e1 e2) = do
-  t1 <- typecheckExp ctx e1
-  t2 <- typecheckExp ctx e2
+typecheckExpr ctx (BinOpE op e1 e2) = do
+  t1 <- typecheckExpr ctx e1
+  t2 <- typecheckExpr ctx e2
 
   case op of
     Add -> checkIntOp t1 t2 Add
@@ -42,14 +42,14 @@ typecheckExp ctx (BinOpE op e1 e2) = do
                    show t1 ++ " and " ++ show t2 ++ " given"
 
 -- (\x : Bool . x) true
-typecheckExp ctx (AbsE v t e) = do
+typecheckExpr ctx (AbsE v t e) = do
   let nc = M.insert (unVar v) t ctx
-  et <- typecheckExp nc e
+  et <- typecheckExpr nc e
   return $ FunT t et
 
-typecheckExp ctx (AppE e1 e2) = do
-  t1 <- typecheckExp ctx e1
-  t2 <- typecheckExp ctx e2
+typecheckExpr ctx (AppE e1 e2) = do
+  t1 <- typecheckExpr ctx e1
+  t2 <- typecheckExpr ctx e2
          
   case t1 of
     BoolT -> Left $ TypeError $ show e1 ++ " is not a function"
@@ -60,25 +60,26 @@ typecheckExp ctx (AppE e1 e2) = do
         else
             Right toT
 
-typecheckExp _ (IntE _) = Right IntT
-typecheckExp _ TrueE = Right BoolT
-typecheckExp _ FalseE = Right BoolT
+typecheckExpr _ (IntE _) = Right IntT
+typecheckExpr _ TrueE = Right BoolT
+typecheckExpr _ FalseE = Right BoolT
 
-typecheckExp ctx (IfE e1 e2 e3) = do
-  t1 <- typecheckExp ctx e1
-  t2 <- typecheckExp ctx e2
-  t3 <- typecheckExp ctx e3
+typecheckExpr ctx (IfE e1 e2 e3) = do
+  t1 <- typecheckExpr ctx e1
+  t2 <- typecheckExpr ctx e2
+  t3 <- typecheckExpr ctx e3
 
   if t1 /= BoolT || t2 /= t3 then
       Left $ TypeError "if expr type error"
   else
       Right t2
 
-typecheck :: TypeCheckContext -> Stmt -> (HlamM Type, TypeCheckContext)
-typecheck ctx (ExpStmt e) = 
-    (typecheckExp ctx e, ctx)
-
-typecheck ctx (LetStmt v e) =
-    case typecheckExp ctx e of
+typecheckLetExpr ctx (LetE v e) =
+    case typecheckExpr ctx e of
       Left err -> (Left err, ctx)
       Right t -> (Right t, M.insert (unVar v) t ctx)
+
+typecheck :: TypeCheckContext -> Expr -> (HlamM Type, TypeCheckContext)
+typecheck ctx (LetE v e) = typecheckLetExpr ctx (LetE v e)
+typecheck ctx e = (typecheckExpr ctx e, ctx)
+

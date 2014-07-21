@@ -25,7 +25,7 @@ parens = surroundedBy (char '(' >> return ()) (char ')' >> return ())
 
 comment :: Parser ()
 comment = do
-  string "/*" >> many ((noneOf "*" >> return ()) <|> starNotCommentEnd) >> commentEnd
+  try (string "/*" >> many ((noneOf "*" >> return ()) <|> starNotCommentEnd) >> commentEnd)
   return ()
 
 starNotCommentEnd :: Parser ()
@@ -102,34 +102,12 @@ absE = do
 ifE :: Parser Expr
 ifE = do
   keyword "if"
-  e1 <- simpleExpr
+  e1 <- expr
   keyword "then"
-  e2 <- simpleExpr
+  e2 <- expr
   keyword "else"
-  e3 <- simpleExpr
+  e3 <- expr
   return $ IfE e1 e2 e3
-
--- FIXME: Operator precedence
-binOpRest :: Expr -> Parser Expr
-binOpRest e1 = do
-  op <- choice $ map try [add', sub', mul', div', and', or']
-  e2 <- binOpE
-  return $ BinOpE op e1 e2
-    where 
-      add' = keyword "+" >> return Add
-      sub' = keyword "-" >> return Sub
-      mul' = keyword "*" >> return Mul
-      div' = keyword "/" >> return Div
-      and' = keyword "&&" >> return LAnd
-      or' = keyword "||" >> return LOr
-
-binOpE :: Parser Expr
-binOpE = do
-  e1 <- simpleExpr
-  try (binOpRest e1) <|> return e1
-
-simpleExpr :: Parser Expr
-simpleExpr = choice $ map try [letE, trueE, falseE, ifE, varE, absE, intE, parens expr]
 
 letE :: Parser Expr
 letE = do
@@ -137,6 +115,54 @@ letE = do
   keyword "="
   e <- expr
   return $ LetE v e
+
+-- FIXME: Operator precedence
+
+binOpP1 :: [Parser Op]
+binOpP1 = map try [add', sub', and', or']
+    where 
+      add' = keyword "+" >> return Add
+      sub' = keyword "-" >> return Sub
+      and' = keyword "&&" >> return LAnd
+      or' = keyword "||" >> return LOr
+
+binOpP2 :: [Parser Op]
+binOpP2 = map try [mul', div']
+    where
+      mul' = keyword "*" >> return Mul
+      div' = keyword "/" >> return Div
+
+binOpE2 :: Parser Expr
+binOpE2 = do
+  choice $ map try [letE, trueE, falseE, ifE, varE, absE, intE, parens expr]
+
+-- (((1 + 2) + 3) - 4)
+--- (BinOpE - (BinOpE + (BinOpE + 1 2)) 3) 4)
+binOpE1 :: Parser Expr
+binOpE1 = do
+  e1 <- binOpE2
+  rest <- binOpRemains e1 binOpP2 binOpE2
+  case rest of 
+    Just binop -> return binop
+    Nothing -> return e1
+
+binOpE :: Parser Expr
+binOpE = do
+  e1 <- binOpE1
+  rest <-binOpRemains e1 binOpP1 binOpE1
+  case rest of 
+    Just binop -> return binop
+    Nothing -> return e1
+
+-- expr suffix like + 1 - 2 + 3
+binOpRemains :: Expr -> [Parser Op] -> Parser Expr -> Parser (Maybe Expr)
+binOpRemains e1 opP expP = do
+  op <- optionMaybe $ choice opP
+  case op of
+    Just op' -> do
+            e2 <- expP
+            binOpRemains (BinOpE op' e1 e2) opP expP
+    Nothing -> return $ Just e1
 
 expr :: Parser Expr
 expr = do

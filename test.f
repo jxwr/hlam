@@ -1,11 +1,11 @@
 a = 1;
 true;
-1 + 2 * 3;
+1 + 2 * 3 + 4 / 5 - 6;
 1 + true;
 true + false;
 true && false;
 true && 1;
-(\n : Int . n) 100;
+(\n : Int . n * n + 1) 100;
 (\n : Int . n) false;
 (\x : Bool . x) true;
 (\x : Bool . x) if false then true else false;

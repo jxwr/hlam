@@ -1,7 +1,10 @@
 a = 1;
 true;
+1 + 2;
+true || false && true;
 1 + 2 * 3 + 4 / 5 - 6;
 1 + true;
+20 & 10;
 true + false;
 true && false;
 true && 1;

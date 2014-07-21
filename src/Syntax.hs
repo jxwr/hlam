@@ -1,5 +1,7 @@
 module Syntax where
 
+import Data.Map as M hiding (map)
+
 newtype Var = Var { unVar :: String } deriving (Eq)
 
 data Expr = VarE Var
@@ -12,7 +14,36 @@ data Expr = VarE Var
          | BinOpE Op Expr Expr
          | LetE Var Expr
 
-data Op = Add | Sub | Mul | Div | LAnd | LOr
+data Op = MUL | DIV | MOD 
+        | ADD | SUB  
+        | SHL | SHR 
+        | LSS | GTR | LEQ | GEQ 
+        | EQL | NEQ 
+        | AND
+        | XOR
+        | OR
+        | LAND 
+        | LOR
+          deriving (Eq, Ord)
+
+opNameMap :: M.Map Op String 
+opNameMap = M.fromList [
+         (MUL, "*"), (DIV, "/"), (MOD, "%"),
+         (ADD, "+"), (SUB, "-"),
+         (SHR, ">>"), (SHL, "<<"),
+         (LSS, "<"), (GTR, ">"), (LEQ, "<="), (GEQ, ">="),
+         (EQL, "=="), (NEQ, "/="), 
+         (AND, "&"), 
+         (XOR, "^"),
+         (OR, "|"),
+         (LAND, "&&"),
+         (LOR, "||")
+        ]
+
+opname :: Op -> String
+opname op = case M.lookup op opNameMap of
+              Just s -> s
+              Nothing -> "Unknown Operator"
 
 data Type = BoolT
           | IntT
@@ -34,12 +65,7 @@ instance Show Expr where
     show (LetE v e) = show v ++ " = " ++ show e
 
 instance Show Op where
-    show Add = "+"
-    show Sub = "-"
-    show Mul = "*"
-    show Div = "/"
-    show LAnd = "&&"
-    show LOr = "||"
+    show op = opname op
 
 instance Show Type where
     show BoolT = "Bool"

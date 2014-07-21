@@ -1,12 +1,14 @@
 module TypeCheck where
 
 import qualified Data.Map as M
+import Data.List
+import Data.Maybe
+
 import Syntax
 import Monad
 import Error
 
 type TypeCheckContext = M.Map String Type
-type TypeError = String
 
 typecheckExpr :: TypeCheckContext -> Expr -> HlamM Type
 typecheckExpr ctx (VarE v) = 
@@ -18,13 +20,7 @@ typecheckExpr ctx (BinOpE op e1 e2) = do
   t1 <- typecheckExpr ctx e1
   t2 <- typecheckExpr ctx e2
 
-  case op of
-    Add -> checkIntOp t1 t2 Add
-    Sub -> checkIntOp t1 t2 Sub
-    Mul -> checkIntOp t1 t2 Mul
-    Div -> checkIntOp t1 t2 Div
-    LAnd -> checkLogicOp t1 t2 LAnd
-    LOr -> checkLogicOp t1 t2 LOr
+  if isIntOp op then checkIntOp t1 t2 op else checkLogicOp t1 t2 op
     where
       checkIntOp t1 t2 op' = 
           if t1 == IntT && t2 == IntT then
@@ -74,12 +70,15 @@ typecheckExpr ctx (IfE e1 e2 e3) = do
   else
       Right t2
 
-typecheckLetExpr ctx (LetE v e) =
-    case typecheckExpr ctx e of
+typecheck :: TypeCheckContext -> Expr -> (HlamM Type, TypeCheckContext)
+typecheck ctx (LetE v e) = case typecheckExpr ctx e of
       Left err -> (Left err, ctx)
       Right t -> (Right t, M.insert (unVar v) t ctx)
 
-typecheck :: TypeCheckContext -> Expr -> (HlamM Type, TypeCheckContext)
-typecheck ctx (LetE v e) = typecheckLetExpr ctx (LetE v e)
 typecheck ctx e = (typecheckExpr ctx e, ctx)
 
+isIntOp :: Op -> Bool
+isIntOp op = isJust $ find (== op) [MUL, DIV, MOD, ADD, SUB, SHL, SHR, AND, XOR, OR]
+
+isLogicOp :: Op -> Bool
+isLogicOp op = isJust $ find (== op) [LSS, GTR, LEQ, GEQ, LAND, LOR]

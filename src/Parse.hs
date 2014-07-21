@@ -3,6 +3,7 @@ module Parse where
 import Prelude hiding (exp)
 import Text.Parsec
 import Data.Map as M hiding (map)
+import Data.List
 
 import Syntax
 import TypeCheck
@@ -116,53 +117,61 @@ letE = do
   e <- expr
   return $ LetE v e
 
--- FIXME: Operator precedence
+-- dirty operator precedence
 
-binOpP1 :: [Parser Op]
-binOpP1 = map try [add', sub', and', or']
-    where 
-      add' = keyword "+" >> return Add
-      sub' = keyword "-" >> return Sub
-      and' = keyword "&&" >> return LAnd
-      or' = keyword "||" >> return LOr
+opc :: Op -> Parser Op
+opc op = try (keyword (opname op) >> return op)
 
-binOpP2 :: [Parser Op]
-binOpP2 = map try [mul', div']
-    where
-      mul' = keyword "*" >> return Mul
-      div' = keyword "/" >> return Div
+opTable :: [[Op]]
+opTable = [[LOR],
+           [LAND],
+           [OR],
+           [XOR],
+           [AND],
+           [EQL, NEQ],
+           [LSS, GTR, LEQ, GEQ],
+           [SHL, SHR],
+           [ADD, SUB],
+           [MUL, DIV, MOD]]
 
-binOpE2 :: Parser Expr
-binOpE2 = do
-  choice $ map try [letE, trueE, falseE, ifE, varE, absE, intE, parens expr]
-
--- (((1 + 2) + 3) - 4)
---- (BinOpE - (BinOpE + (BinOpE + 1 2)) 3) 4)
-binOpE1 :: Parser Expr
-binOpE1 = do
-  e1 <- binOpE2
-  rest <- binOpRemains e1 binOpP2 binOpE2
-  case rest of 
-    Just binop -> return binop
-    Nothing -> return e1
+binOpE' :: Int -> Parser Expr
+binOpE' n = 
+    if n == length opTable then
+        choice $ map try [letE, trueE, falseE, ifE, varE, absE, intE, parens expr]
+    else do
+      let opE = binOpE' (n + 1)
+      e1 <- opE
+      rest <-binOpRemains e1 (opTable !! n) opE
+      case rest of 
+        Just binop -> return binop
+        Nothing -> return e1
 
 binOpE :: Parser Expr
-binOpE = do
-  e1 <- binOpE1
-  rest <-binOpRemains e1 binOpP1 binOpE1
-  case rest of 
-    Just binop -> return binop
-    Nothing -> return e1
+binOpE = binOpE' 0
+
+opParseSeqList :: [Op]
+opParseSeqList = reverse $ sortBy cmp (concat opTable)
+    where 
+      cmp a b = compare (length (opname a)) (length (opname b))
 
 -- expr suffix like + 1 - 2 + 3
-binOpRemains :: Expr -> [Parser Op] -> Parser Expr -> Parser (Maybe Expr)
-binOpRemains e1 opP expP = do
-  op <- optionMaybe $ choice opP
+binOpRemains :: Expr -> [Op] -> Parser Expr -> Parser (Maybe Expr)
+binOpRemains e1 ops expP = do
+  -- peek a token
+  op <- optionMaybe . lookAhead . choice $ map opc $ opParseSeqList
   case op of
-    Just op' -> do
+    Just op' ->
+        -- if it is in ops
+        case find (== op') ops of
+          Just _ -> do
+            -- consume the token
+            _ <- choice $ map opc (concat opTable)
             e2 <- expP
-            binOpRemains (BinOpE op' e1 e2) opP expP
-    Nothing -> return $ Just e1
+            binOpRemains (BinOpE op' e1 e2) ops expP
+          Nothing ->
+            return $ Just e1
+    Nothing ->
+        return $ Just e1
 
 expr :: Parser Expr
 expr = do

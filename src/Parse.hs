@@ -49,120 +49,120 @@ keyword s = separators >> try (string s) >> separators
 semi :: Parser ()
 semi = separators >> char ';' >> separators
 
-parseVar :: Parser Var
-parseVar = do
+var :: Parser Var
+var = do
   lit <- many1 letter
   return $ Var lit
 
-parseIntE :: Parser Exp
-parseIntE = do
+intE :: Parser Exp
+intE = do
   dig <- many1 digit
   return $ IntE (read dig :: Int)
 
-parseTrueE :: Parser Exp
-parseTrueE = do
+trueE :: Parser Exp
+trueE = do
   keyword "true" >> return TrueE
 
-parseFalseE :: Parser Exp
-parseFalseE = do
+falseE :: Parser Exp
+falseE = do
   keyword "false" >> return FalseE
 
-parseVarE :: Parser Exp
-parseVarE = do
-  var <- parseVar
-  return $ VarE var
+varE :: Parser Exp
+varE = do
+  v <- var
+  return $ VarE v
 
-parseBoolT :: Parser Type
-parseBoolT = do
+boolT :: Parser Type
+boolT = do
   keyword "Bool" >> return BoolT
 
-parseIntT :: Parser Type
-parseIntT = do
+intT :: Parser Type
+intT = do
   keyword "Int" >> return IntT
 
-parseBaseType :: Parser Type
-parseBaseType = do
-  parseBoolT <|> parseIntT <|> parens parseBaseType
+baseType :: Parser Type
+baseType = do
+  boolT <|> intT <|> parens baseType
 
-parseType :: Parser Type
-parseType = do
-  ts <- sepBy1 parseBaseType (keyword "->")
+typ :: Parser Type
+typ = do
+  ts <- sepBy1 baseType (keyword "->")
   return $ foldl1 FunT ts
 
-parseAbsE :: Parser Exp
-parseAbsE = do
+absE :: Parser Exp
+absE = do
   keyword "\\"
-  var <- parseVar
+  v <- var
   keyword ":"
-  typ <- parseType
+  t <- typ
   keyword "."
-  exp <- parseExp
-  return $ AbsE var typ exp
+  e <- exp
+  return $ AbsE v t e
 
-parseIfE :: Parser Exp
-parseIfE = do
+ifE :: Parser Exp
+ifE = do
   keyword "if"
-  e1 <- parseSimpleExp
+  e1 <- simpleExp
   keyword "then"
-  e2 <- parseSimpleExp
+  e2 <- simpleExp
   keyword "else"
-  e3 <- parseSimpleExp
+  e3 <- simpleExp
   return $ IfE e1 e2 e3
 
 -- FIXME: Operator precedence
-parseBinOpRest :: Exp -> Parser Exp
-parseBinOpRest e1 = do
-  op <- (try parseAdd <|> try parseSub <|> try parseMul <|> try parseDiv <|> try parseLAnd <|> try parseLOr)
-  e2 <- parseBinOpE
+binOpRest :: Exp -> Parser Exp
+binOpRest e1 = do
+  op <- (try add' <|> try sub' <|> try mul' <|> try div' <|> try and' <|> try or')
+  e2 <- binOpE
   return $ BinOpE op e1 e2
     where 
-      parseAdd = keyword "+" >> return Add
-      parseSub = keyword "-" >> return Sub
-      parseMul = keyword "*" >> return Mul
-      parseDiv = keyword "/" >> return Div
-      parseLAnd = keyword "&&" >> return LAnd
-      parseLOr = keyword "||" >> return LOr
+      add' = keyword "+" >> return Add
+      sub' = keyword "-" >> return Sub
+      mul' = keyword "*" >> return Mul
+      div' = keyword "/" >> return Div
+      and' = keyword "&&" >> return LAnd
+      or' = keyword "||" >> return LOr
 
-parseBinOpE :: Parser Exp
-parseBinOpE = do
-  e1 <- parseSimpleExp
-  try (parseBinOpRest e1) <|> return e1
+binOpE :: Parser Exp
+binOpE = do
+  e1 <- simpleExp
+  try (binOpRest e1) <|> return e1
 
-parseSimpleExp :: Parser Exp
-parseSimpleExp =
-    parseTrueE <|> 
-    parseFalseE <|> 
-    parseIfE <|> 
-    parseVarE <|> 
-    parseAbsE <|> 
-    parseIntE <|> 
-    parens parseExp
+simpleExp :: Parser Exp
+simpleExp =
+    trueE <|> 
+    falseE <|> 
+    ifE <|> 
+    varE <|> 
+    absE <|> 
+    intE <|> 
+    parens exp
 
-parseExp :: Parser Exp
-parseExp = do
-  es <- sepBy1 parseBinOpE separators
+exp :: Parser Exp
+exp = do
+  es <- sepBy1 binOpE separators
   return $ foldl1 AppE es
 
-parseExpStmt :: Parser Stmt
-parseExpStmt = do
-  exp <- parseExp
-  return $ ExpStmt exp
+expStmt :: Parser Stmt
+expStmt = do
+  e <- exp
+  return $ ExpStmt e
 
-parseLetStmt :: Parser Stmt
-parseLetStmt = do
-  var <- parseVar
+letStmt :: Parser Stmt
+letStmt = do
+  v <- var
   keyword "="
-  exp <- parseExp
-  return $ LetStmt var exp
+  e <- exp
+  return $ LetStmt v e
 
-parseStmt :: Parser Stmt
-parseStmt = do
-  try parseLetStmt <|> parseExpStmt 
+stmt :: Parser Stmt
+stmt = do
+  try letStmt <|> expStmt 
 
 parseStmts :: Parser [Stmt]
 parseStmts = do
   separators
-  stmts <- endBy1 parseStmt semi
+  stmts <- endBy1 stmt semi
   return stmts
 
 parseHlam :: String -> String -> [HlamM Stmt]

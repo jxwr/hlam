@@ -2,6 +2,8 @@ a = 1;
 true;
 1 + 2;
 true || false && true;
+if false then true else false;
+if (true || false) then 1 + 2 else 100;
 1 + 2 * 3 + 4 / 5 - 6;
 1 + true;
 20 & 10;

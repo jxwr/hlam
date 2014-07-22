@@ -137,7 +137,7 @@ opTable = [[LOR],
 binOpE' :: Int -> Parser Expr
 binOpE' n = 
     if n == length opTable then
-        choice $ map try [letE, trueE, falseE, ifE, varE, absE, intE, parens expr]
+        choice $ map try [trueE, falseE, ifE, letE, varE, absE, intE, parens expr]
     else do
       let opE = binOpE' (n + 1)
       e1 <- opE

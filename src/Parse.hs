@@ -103,9 +103,9 @@ absE = do
 ifE :: Parser Expr
 ifE = do
   keyword "if"
-  e1 <- expr
+  e1 <- binOpE
   keyword "then"
-  e2 <- expr
+  e2 <- binOpE
   keyword "else"
   e3 <- expr
   return $ IfE e1 e2 e3
@@ -175,7 +175,7 @@ binOpRemains e1 ops expP = do
 
 expr :: Parser Expr
 expr = do
-  es <- sepBy1 binOpE separators
+  es <- sepBy binOpE separators
   return $ foldl1 AppE es
 
 exprs :: Parser [Expr]
